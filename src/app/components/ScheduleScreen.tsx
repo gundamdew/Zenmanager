@@ -1,7 +1,8 @@
 /**
  * ScheduleScreen — imported calendar view (university + work).
  * Features:
- *  - Daily / Weekly view toggle (sticky header)
+ *  - Daily / Weekly / Monthly view toggle (sticky header)
+ *  - Week/month navigation arrows in header
  *  - Vertical timeline (06:00–23:59) with absolutely-positioned event blocks
  *  - Source badges: "USOS" for lectures, role tag for work shifts
  *  - Conflict Indicator: Low Sleep Warning when a late work shift
@@ -59,10 +60,10 @@ interface CalEvent {
 }
 
 // ─── Timeline constants ───────────────────────────────────────────────────────
-const TL_START = 6;           // 06:00
-const TL_END   = 24;          // 24:00  (midnight)
-const PX_HOUR  = 72;          // pixels per hour
-const TL_HEIGHT = (TL_END - TL_START) * PX_HOUR; // 1296px
+const TL_START = 6;
+const TL_END   = 24;
+const PX_HOUR  = 72;
+const TL_HEIGHT = (TL_END - TL_START) * PX_HOUR;
 
 function timeToTop(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -99,12 +100,11 @@ const EVENTS: CalEvent[] = [
     category:'work', location:'The Daily Grind Café', source:'work-system', role:'Barista' },
   { id:'m5', title:'Calculus Study', subtitle:'Integrals & Series Ch.6-8',
     day:0, startTime:'17:30', endTime:'19:00', category:'exam' },
-  // ⚠️ Late-night shift → conflict with Tue 07:30 lecture
   { id:'m6', title:'Evening Work Shift', subtitle:'Closing shift',
     day:0, startTime:'20:00', endTime:'23:30',
     category:'work', location:'The Daily Grind Café', source:'work-system', role:'Closing Barista' },
 
-  // ── Tuesday ── (early morning → conflict)
+  // ── Tuesday ──
   { id:'t1', title:'Software Engineering', subtitle:'Design Patterns — Lecture 7',
     day:1, startTime:'07:30', endTime:'09:00',
     category:'lecture', location:'Hall A2, Room 105', source:'usos' },
@@ -159,14 +159,43 @@ const EVENTS: CalEvent[] = [
 
 const DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const DAYS_FULL  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const MONTHS     = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ─── Navigation helpers ────────────────────────────────────────────────────────
+// Base week: Mon Apr 27 2026
+const BASE_WEEK_START = new Date(2026, 3, 27);
+
+function getWeekDates(offset: number): number[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(BASE_WEEK_START);
+    d.setDate(d.getDate() + offset * 7 + i);
+    return d.getDate();
+  });
+}
+
+function getWeekLabel(offset: number): string {
+  const start = new Date(BASE_WEEK_START);
+  start.setDate(start.getDate() + offset * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  if (start.getMonth() === end.getMonth()) {
+    return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} – ${end.getDate()}`;
+  }
+  return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} – ${MONTHS_SHORT[end.getMonth()]} ${end.getDate()}`;
+}
+
+function getMonthLabel(offset: number): string {
+  const d = new Date(2026, 4 + offset, 1); // base: May 2026
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 // ─── Conflict detection ────────────────────────────────────────────────────────
-/** Returns true when day `d` ends after 21:00 AND day `d+1` starts before 08:00 */
 function hasLowSleepConflict(dayIdx: number): boolean {
-  const todayEvts  = EVENTS.filter(e => e.day === dayIdx);
+  const todayEvts    = EVENTS.filter(e => e.day === dayIdx);
   const tomorrowEvts = EVENTS.filter(e => e.day === dayIdx + 1);
   if (!todayEvts.length || !tomorrowEvts.length) return false;
-  const lastEnd   = Math.max(...todayEvts.map(e => timeToMins(e.endTime)));
+  const lastEnd    = Math.max(...todayEvts.map(e => timeToMins(e.endTime)));
   const firstStart = Math.min(...tomorrowEvts.map(e => timeToMins(e.startTime)));
   return lastEnd >= 21 * 60 && firstStart <= 8 * 60;
 }
@@ -202,7 +231,6 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
         boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
       }}
     >
-      {/* Top row */}
       <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom: short ? 0 : 3 }}>
         <div style={{
           display:'flex', alignItems:'center', gap:3,
@@ -212,7 +240,6 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
           <CatIcon cat={ev.category} size={10} />
           {CAT[ev.category] && ev.category === 'work' ? (ev.role ?? 'Work') : ev.category.charAt(0).toUpperCase() + ev.category.slice(1)}
         </div>
-        {/* Source badge */}
         {ev.source === 'usos' && (
           <div style={{
             display:'flex', alignItems:'center', gap:2,
@@ -233,7 +260,6 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
         )}
       </div>
 
-      {/* Title */}
       {!short && (
         <p style={{ fontSize:13, fontWeight:600, color:T.text, letterSpacing:'-0.2px',
           lineHeight:1.3, marginBottom:2, overflow:'hidden',
@@ -242,7 +268,6 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
         </p>
       )}
 
-      {/* Time + location */}
       {!short && (
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:10, color: T.textMuted, fontWeight:500 }}>
@@ -256,7 +281,6 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
         </div>
       )}
 
-      {/* Short card: just show title */}
       {short && (
         <p style={{ fontSize:11, fontWeight:600, color:T.text, overflow:'hidden',
           whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
@@ -269,7 +293,7 @@ function EventBlock({ ev, left, width }: { ev: CalEvent; left: number; width: nu
 
 // ─── Low Sleep Warning banner ─────────────────────────────────────────────────
 function LowSleepWarning({ endTime, nextDayStart }: { endTime: string; nextDayStart: string }) {
-  const gap = timeToMins(nextDayStart) + (24 * 60) - timeToMins(endTime);
+  const gap  = timeToMins(nextDayStart) + (24 * 60) - timeToMins(endTime);
   const hrs  = Math.floor(gap / 60);
   const mins = gap % 60;
 
@@ -326,7 +350,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
     ? `${String(Math.floor(nextDayFirstStart / 60)).padStart(2,'0')}:${String(nextDayFirstStart % 60).padStart(2,'0')}`
     : null;
 
-  // Time markers
   const hours = Array.from({ length: TL_END - TL_START }, (_, i) => TL_START + i);
 
   return (
@@ -363,7 +386,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
         </button>
       </div>
 
-      {/* Conflict banner — before timeline if applicable */}
       {conflict && lastWorkEnd && nextDayFirstStartStr && (
         <div style={{ padding:'0 16px 12px' }}>
           <LowSleepWarning endTime={lastWorkEnd} nextDayStart={nextDayFirstStartStr} />
@@ -373,7 +395,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
       {/* Timeline */}
       <div style={{ position:'relative', height: TL_HEIGHT + 32,
         paddingBottom:16, paddingLeft:0, paddingRight:0 }}>
-        {/* Hour grid */}
         {hours.map(h => (
           <div key={h} style={{
             position:'absolute',
@@ -383,7 +404,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
             display:'flex',
             alignItems:'flex-start',
           }}>
-            {/* Time label */}
             <div style={{
               width: 50,
               paddingLeft: 16,
@@ -396,7 +416,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
             }}>
               {h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`}
             </div>
-            {/* Dashed grid line */}
             <div style={{
               flex:1,
               height:1,
@@ -409,7 +428,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
           </div>
         ))}
 
-        {/* Event blocks (positioned absolutely within events area) */}
         <div style={{ position:'absolute', top:0, left:50, right:12, height:'100%' }}>
           {events.map(ev => (
             <EventBlock
@@ -427,7 +445,6 @@ function DailyView({ dayIdx, onDayChange }: { dayIdx: number; onDayChange: (d: n
 
 // ─── Weekly Overview ──────────────────────────────────────────────────────────
 function WeeklyView({ onSelectDay }: { onSelectDay: (d: number) => void }) {
-  // Today = Friday = index 4
   const todayIdx = 4;
 
   return (
@@ -454,7 +471,6 @@ function WeeklyView({ onSelectDay }: { onSelectDay: (d: number) => void }) {
               outline:'none',
             }}
           >
-            {/* Day header */}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <p style={{ fontSize:15, fontWeight:700, color: isToday ? T.primary : T.text,
@@ -477,7 +493,6 @@ function WeeklyView({ onSelectDay }: { onSelectDay: (d: number) => void }) {
               </span>
             </div>
 
-            {/* Category dots + mini event list */}
             <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
               {dayEvts.length === 0 ? (
                 <p style={{ fontSize:12, color:T.textMuted }}>No events · Rest day 🌿</p>
@@ -510,16 +525,149 @@ function WeeklyView({ onSelectDay }: { onSelectDay: (d: number) => void }) {
   );
 }
 
+// ─── Monthly View ─────────────────────────────────────────────────────────────
+function MonthlyView({ monthOffset, onSelectDay }: { monthOffset: number; onSelectDay: (d: number) => void }) {
+  // Base: May 2026 (month index 4)
+  const d = new Date(2026, 4 + monthOffset, 1);
+  const year  = d.getFullYear();
+  const month = d.getMonth();
+
+  // Day-of-week for the 1st (0=Sun → convert to Mon-first: Mon=0, Sun=6)
+  let startDow = d.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const cellCount = startDow + totalDays;
+  const weeks     = Math.ceil(cellCount / 7);
+
+  // Map a calendar date to a EVENTS day index (mock week: Mon Apr 27 = 0 … Sun May 3 = 6)
+  function getDayEvents(dayNum: number): CalEvent[] {
+    if (month === 3 && dayNum >= 27 && dayNum <= 30) return EVENTS.filter(e => e.day === dayNum - 27);
+    if (month === 4 && dayNum >= 1  && dayNum <= 3)  return EVENTS.filter(e => e.day === dayNum + 3);
+    return [];
+  }
+
+  const todayDate = 22; // May 22, 2026
+
+  return (
+    <div style={{ flex:1, overflowY:'auto', padding:'8px 16px 16px' }} className="zs-scroll">
+      {/* Day-of-week headers */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', marginBottom:6 }}>
+        {['M','T','W','T','F','S','S'].map((label, i) => (
+          <div key={i} style={{
+            textAlign:'center', fontSize:11, fontWeight:600,
+            color: i >= 5 ? T.primary : T.textMuted,
+            padding:'4px 0',
+          }}>
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      {Array.from({ length: weeks }, (_, weekIdx) => (
+        <div key={weekIdx} style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:'3px', marginBottom:3 }}>
+          {Array.from({ length: 7 }, (_, colIdx) => {
+            const dayNum  = weekIdx * 7 + colIdx - startDow + 1;
+            const isValid = dayNum >= 1 && dayNum <= totalDays;
+            const isToday = monthOffset === 0 && month === 4 && dayNum === todayDate;
+            const dayEvts = isValid ? getDayEvents(dayNum) : [];
+            const isWeekend = colIdx >= 5;
+
+            return (
+              <div
+                key={colIdx}
+                onClick={() => {
+                  if (!isValid) return;
+                  // Drill into matching day in weekly mock if it exists
+                  if (month === 3 && dayNum >= 27 && dayNum <= 30) onSelectDay(dayNum - 27);
+                  else if (month === 4 && dayNum >= 1 && dayNum <= 3) onSelectDay(dayNum + 3);
+                }}
+                style={{
+                  minHeight:52,
+                  padding:'5px 4px 4px',
+                  borderRadius:10,
+                  background: isToday ? T.primarySoft : 'transparent',
+                  border: isToday ? `1.5px solid ${T.primary}` : '1.5px solid transparent',
+                  cursor: isValid && dayEvts.length > 0 ? 'pointer' : 'default',
+                  transition:'background 0.15s ease',
+                }}
+              >
+                {isValid && (
+                  <>
+                    <div style={{
+                      fontSize:13,
+                      fontWeight: isToday ? 700 : 400,
+                      color: isToday ? T.primary : isWeekend ? T.textSec : T.text,
+                      textAlign:'center',
+                      marginBottom:4,
+                      lineHeight:1,
+                    }}>
+                      {dayNum}
+                    </div>
+                    {/* Event dots */}
+                    <div style={{ display:'flex', justifyContent:'center', gap:2, flexWrap:'wrap' }}>
+                      {dayEvts.slice(0, 3).map((ev, idx) => (
+                        <div key={idx} style={{
+                          width:5, height:5, borderRadius:'50%',
+                          background: CAT[ev.category].dot,
+                        }} />
+                      ))}
+                      {dayEvts.length > 3 && (
+                        <div style={{ width:5, height:5, borderRadius:'50%', background:T.textMuted }} />
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      {/* Legend */}
+      <div style={{
+        marginTop:16, background:T.surface, borderRadius:14, padding:'12px 16px',
+        display:'flex', flexWrap:'wrap', gap:'10px 20px',
+      }}>
+        {Object.entries(CAT).map(([key, cfg]) => (
+          <div key={key} style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:cfg.dot }} />
+            <span style={{ fontSize:11, color:T.textSec, fontWeight:500, textTransform:'capitalize' }}>{key}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function ScheduleScreen() {
-  // Default to current day (Friday = 4)
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily');
-  const [selectedDay, setSelectedDay] = useState(4); // Friday = today
+  const [viewMode,     setViewMode]     = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [selectedDay,  setSelectedDay]  = useState(4);
+  const [weekOffset,   setWeekOffset]   = useState(0);
+  const [monthOffset,  setMonthOffset]  = useState(0);
 
   const handleSelectDay = (d: number) => {
     setSelectedDay(d);
     setViewMode('daily');
   };
+
+  // Navigation handlers — week for daily/weekly, month for monthly
+  const goBack = () => {
+    if (viewMode === 'monthly') setMonthOffset(o => o - 1);
+    else setWeekOffset(o => o - 1);
+  };
+  const goForward = () => {
+    if (viewMode === 'monthly') setMonthOffset(o => o + 1);
+    else setWeekOffset(o => o + 1);
+  };
+
+  const periodLabel = viewMode === 'monthly'
+    ? getMonthLabel(monthOffset)
+    : `Week of ${getWeekLabel(weekOffset)}`;
+
+  const weekDates = getWeekDates(weekOffset);
 
   return (
     <PhoneFrame>
@@ -527,74 +675,100 @@ export function ScheduleScreen() {
 
         {/* ── Sticky Header ── */}
         <div style={{
-          padding:'10px 20px 12px',
+          padding:'10px 16px 12px',
           background: T.surface,
           borderBottom:`1px solid ${T.border}`,
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'space-between',
           flexShrink:0,
           zIndex:10,
           boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
         }}>
-          <div>
-            <h2 style={{ fontSize:18, fontWeight:700, color:T.text, letterSpacing:'-0.4px' }}>
-              Schedule
-            </h2>
-            <p style={{ fontSize:11, color:T.textMuted }}>
-              Week of Apr 27 – May 3
-            </p>
-          </div>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
 
-          {/* Daily / Weekly toggle */}
-          <div style={{
-            display:'flex',
-            background: T.bg,
-            borderRadius:12,
-            padding:3,
-            border:`1px solid ${T.border}`,
-          }}>
-            {(['daily', 'weekly'] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                style={{
-                  padding:'6px 14px',
-                  borderRadius:10,
-                  border:'none',
-                  background: viewMode === mode ? T.surface : 'transparent',
-                  color: viewMode === mode ? T.primary : T.textMuted,
-                  fontWeight: viewMode === mode ? 600 : 400,
-                  fontSize:12,
-                  cursor:'pointer',
-                  transition:'all 0.2s ease',
-                  boxShadow: viewMode === mode ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
-                  fontFamily:"'DM Sans', sans-serif",
-                  outline:'none',
-                }}
-              >
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </button>
-            ))}
+            {/* Title + period navigation */}
+            <div>
+              <h2 style={{ fontSize:18, fontWeight:700, color:T.text, letterSpacing:'-0.4px', marginBottom:4 }}>
+                Schedule
+              </h2>
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <button
+                  onClick={goBack}
+                  style={{
+                    width:22, height:22, borderRadius:6,
+                    border:`1px solid ${T.border}`, background:T.bg,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    cursor:'pointer', outline:'none',
+                  }}
+                >
+                  <ChevronLeft size={13} color={T.textSec} />
+                </button>
+                <p style={{ fontSize:11, color:T.textMuted, minWidth:110, textAlign:'center' }}>
+                  {periodLabel}
+                </p>
+                <button
+                  onClick={goForward}
+                  style={{
+                    width:22, height:22, borderRadius:6,
+                    border:`1px solid ${T.border}`, background:T.bg,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    cursor:'pointer', outline:'none',
+                  }}
+                >
+                  <ChevronRight size={13} color={T.textSec} />
+                </button>
+              </div>
+            </div>
+
+            {/* Daily / Weekly / Monthly toggle */}
+            <div style={{
+              display:'flex',
+              background: T.bg,
+              borderRadius:12,
+              padding:3,
+              border:`1px solid ${T.border}`,
+            }}>
+              {(['daily', 'weekly', 'monthly'] as const).map(mode => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  style={{
+                    padding:'6px 10px',
+                    borderRadius:10,
+                    border:'none',
+                    background: viewMode === mode ? T.surface : 'transparent',
+                    color: viewMode === mode ? T.primary : T.textMuted,
+                    fontWeight: viewMode === mode ? 600 : 400,
+                    fontSize:11,
+                    cursor:'pointer',
+                    transition:'all 0.2s ease',
+                    boxShadow: viewMode === mode ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+                    fontFamily:"'DM Sans', sans-serif",
+                    outline:'none',
+                  }}
+                >
+                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ── Day chip strip (daily view only) ── */}
         {viewMode === 'daily' && (
-          <div style={{
-            display:'flex',
-            gap:6,
-            padding:'10px 16px',
-            background: T.surface,
-            borderBottom:`1px solid ${T.borderSoft}`,
-            overflowX:'auto',
-            flexShrink:0,
-          }}
-          className="zs-scroll"
+          <div
+            style={{
+              display:'flex',
+              gap:6,
+              padding:'10px 16px',
+              background: T.surface,
+              borderBottom:`1px solid ${T.borderSoft}`,
+              overflowX:'auto',
+              flexShrink:0,
+            }}
+            className="zs-scroll"
           >
             {DAYS_SHORT.map((d, i) => {
-              const isActive = i === selectedDay;
-              const isToday  = i === 4;
+              const isActive    = i === selectedDay;
+              const isToday     = i === 4;
               const hasConflict = hasLowSleepConflict(i);
               return (
                 <button
@@ -611,12 +785,15 @@ export function ScheduleScreen() {
                   }}
                 >
                   <span style={{ fontSize:11, fontWeight:600 }}>{d}</span>
-                  {isToday && !isActive && (
-                    <div style={{ width:4, height:4, borderRadius:'50%', background:T.primary }} />
-                  )}
-                  {isActive && (
-                    <div style={{ width:4, height:4, borderRadius:'50%', background:'rgba(255,255,255,0.6)' }} />
-                  )}
+                  {/* Numerical date replaces task count */}
+                  <span style={{
+                    fontSize:12,
+                    fontWeight: isToday ? 700 : 500,
+                    color: isActive ? 'rgba(255,255,255,0.9)' : (isToday ? T.primary : T.textMuted),
+                    lineHeight:1,
+                  }}>
+                    {weekDates[i]}
+                  </span>
                   {hasConflict && (
                     <div style={{
                       position:'absolute', top:-3, right:-3,
@@ -631,10 +808,15 @@ export function ScheduleScreen() {
         )}
 
         {/* ── View content ── */}
-        {viewMode === 'daily'
-          ? <DailyView dayIdx={selectedDay} onDayChange={setSelectedDay} />
-          : <WeeklyView onSelectDay={handleSelectDay} />
-        }
+        {viewMode === 'daily' && (
+          <DailyView dayIdx={selectedDay} onDayChange={setSelectedDay} />
+        )}
+        {viewMode === 'weekly' && (
+          <WeeklyView onSelectDay={handleSelectDay} />
+        )}
+        {viewMode === 'monthly' && (
+          <MonthlyView monthOffset={monthOffset} onSelectDay={handleSelectDay} />
+        )}
 
         <AppBottomNav />
       </div>

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   Sparkles, RotateCcw, MapPin, ChevronRight,
-  Check, Grip, GraduationCap, Briefcase, Users,
-  Pencil, Heart, Coffee, Zap, Bell,
+  Check, GraduationCap, Briefcase, Users,
+  Pencil, Heart, Coffee, Zap, Bell, Pen, X, GripVertical,
 } from 'lucide-react';
 import { PhoneFrame } from './PhoneFrame';
 import { AddTaskModal, NewTask, TaskCategory } from './AddTaskModal';
@@ -73,9 +73,18 @@ function getGreeting() {
 }
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
-function TaskCard({ task, onToggle, isLast }: { task:Task; onToggle:(id:string)=>void; isLast:boolean }) {
+function TaskCard({
+  task, onToggle, onDelete, editMode, isLast,
+}: {
+  task: Task;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  editMode: boolean;
+  isLast: boolean;
+}) {
   const cfg = CATEGORY[task.category];
   const [pressing, setPressing] = useState(false);
+  const isCalendarOnly = task.category === 'personal' || task.category === 'break';
 
   return (
     <div style={{ display:'flex' }}>
@@ -116,9 +125,11 @@ function TaskCard({ task, onToggle, isLast }: { task:Task; onToggle:(id:string)=
             transform: pressing ? 'scale(0.985)' : 'scale(1)',
             transition:'transform 0.15s ease, opacity 0.3s ease',
             boxShadow: task.completed ? 'none' : '0 2px 12px rgba(0,0,0,0.05)',
+            display:'flex',
+            flexDirection:'column',
           }}
         >
-          {/* Row 1: badges + checkbox */}
+          {/* Row 1: badges + action */}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <div style={{
@@ -137,18 +148,38 @@ function TaskCard({ task, onToggle, isLast }: { task:Task; onToggle:(id:string)=
                 </div>
               )}
             </div>
-            <button
-              onClick={() => onToggle(task.id)}
-              style={{
-                width:26, height:26, borderRadius:8,
-                border: task.completed ? 'none' : `2px solid ${cfg.border}`,
-                background: task.completed ? cfg.dot : 'transparent',
-                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)', flexShrink:0,
-              }}
-            >
-              {task.completed && <Check size={14} color="#fff" strokeWidth={3} />}
-            </button>
+
+            {/* Right action: delete button in edit mode, checkbox for non-calendar tasks otherwise */}
+            {editMode ? (
+              <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                <GripVertical size={14} color={T.textMuted} />
+                <button
+                  onClick={() => onDelete(task.id)}
+                  style={{
+                    width:26, height:26, borderRadius:8,
+                    border:'none',
+                    background:'#FEE2E2',
+                    cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                    flexShrink:0, transition:'background 0.15s ease',
+                  }}
+                >
+                  <X size={14} color="#EF4444" strokeWidth={2.5} />
+                </button>
+              </div>
+            ) : !isCalendarOnly ? (
+              <button
+                onClick={() => onToggle(task.id)}
+                style={{
+                  width:26, height:26, borderRadius:8,
+                  border: task.completed ? 'none' : `2px solid ${cfg.border}`,
+                  background: task.completed ? cfg.dot : 'transparent',
+                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                  transition:'all 0.25s cubic-bezier(0.34,1.56,0.64,1)', flexShrink:0,
+                }}
+              >
+                {task.completed && <Check size={14} color="#fff" strokeWidth={3} />}
+              </button>
+            ) : null}
           </div>
 
           {/* Title */}
@@ -256,16 +287,22 @@ function RegenFAB({ onRegen, regenerating }: { onRegen:()=>void; regenerating:bo
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export function DashboardScreen() {
-  const [tasks,       setTasks]       = useState<Task[]>(INITIAL_TASKS);
-  const [modalOpen,   setModalOpen]   = useState(false);
-  const [regenerating,setRegenerate]  = useState(false);
-  const [toast,       setToast]       = useState<string | null>(null);
+  const [tasks,        setTasks]       = useState<Task[]>(INITIAL_TASKS);
+  const [modalOpen,    setModalOpen]   = useState(false);
+  const [regenerating, setRegenerate]  = useState(false);
+  const [toast,        setToast]       = useState<string | null>(null);
+  const [editMode,     setEditMode]    = useState(false);
 
   const greeting = getGreeting();
   const dateStr  = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
 
   const toggleTask = (id: string) =>
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed:!t.completed } : t));
+
+  const deleteTask = (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    showToast('Block removed from your plan');
+  };
 
   const handleAddTask = (nt: NewTask) => {
     const task: Task = {
@@ -355,18 +392,52 @@ export function DashboardScreen() {
             <h2 style={{ fontSize:16, fontWeight:700, color:T.text, letterSpacing:'-0.3px' }}>
               Today's Schedule
             </h2>
-            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-              <Grip size={14} color={T.textMuted} />
-              <span style={{ fontSize:12, color:T.textMuted }}>
-                {tasks.filter(t => !t.completed).length} remaining
-              </span>
-            </div>
+
+            {/* Edit toggle button */}
+            <button
+              onClick={() => setEditMode(e => !e)}
+              style={{
+                display:'flex', alignItems:'center', gap:5,
+                padding:'6px 14px', borderRadius:20,
+                background: editMode ? T.primary : T.surface,
+                border: `1.5px solid ${editMode ? T.primary : T.border}`,
+                color: editMode ? '#fff' : T.textSec,
+                cursor:'pointer', fontSize:12, fontWeight:600,
+                transition:'all 0.2s ease', outline:'none',
+                boxShadow: editMode ? '0 2px 8px rgba(79,99,210,0.3)' : '0 1px 4px rgba(0,0,0,0.06)',
+              }}
+            >
+              <Pen size={12} color={editMode ? '#fff' : T.textSec} />
+              {editMode ? 'Done' : 'Edit'}
+            </button>
           </div>
+
+          {/* Edit mode banner */}
+          {editMode && (
+            <div style={{
+              margin:'0 20px 12px',
+              background:'#FEF3C7', border:'1px solid #F59E0B',
+              borderRadius:12, padding:'9px 14px',
+              display:'flex', alignItems:'center', gap:8,
+            }}>
+              <GripVertical size={13} color="#92400E" />
+              <p style={{ fontSize:12, color:'#92400E', fontWeight:500 }}>
+                Drag to reorder · Tap <X size={11} style={{ display:'inline', verticalAlign:'middle' }} color="#EF4444" /> to remove a block
+              </p>
+            </div>
+          )}
 
           {/* Timeline */}
           <div style={{ padding:'0 14px 0 12px' }}>
             {tasks.map((task, i) => (
-              <TaskCard key={task.id} task={task} onToggle={toggleTask} isLast={i === tasks.length - 1} />
+              <TaskCard
+                key={task.id}
+                task={task}
+                onToggle={toggleTask}
+                onDelete={deleteTask}
+                editMode={editMode}
+                isLast={i === tasks.length - 1}
+              />
             ))}
           </div>
           <div style={{ height:80 }} />
