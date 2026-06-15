@@ -29,26 +29,14 @@ import {
 import { useNavigate } from 'react-router';
 import { PhoneFrame } from './PhoneFrame';
 import { AppBottomNav } from './AppBottomNav';
+import { IntegrationConnectFlow } from './IntegrationConnectFlow';
+import type { ConnectService } from './IntegrationConnectFlow';
+import { T, BRAND_GRADIENT, glass } from '../theme/glass';
 
-// ─── Design tokens (shared language across ZenSync) ───────────────────────────
-const T = {
-  primary: '#4F63D2',
-  primarySoft: '#EEF0FD',
-  primaryDeep: '#3B4FBF',
-  accent: '#7CC8A4',
-  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',
-  surface: '#FFFFFF',
-  surfaceAlt: '#F9F8F6',
-  text: '#1A1A2E',
-  textSec: '#64748B',
-  textMuted: '#94A3B8',
-  border: '#E2E8F0',
-  borderSoft: '#F1F5F9',
-  warn: '#F59E0B',
-  warnSoft: '#FFFBEB',
-  danger: '#EF4444',
-};
+// ─── Semantic colors not covered by the shared brand tokens ───────────────────
+const warn = '#F59E0B';
+const warnSoft = '#FFFBEB';
+const danger = '#EF4444';
 
 const CATEGORY_COLORS = {
   lecture: { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', dot: '#3B82F6' },
@@ -153,7 +141,7 @@ const FILTERS = [
 
 // ─── Utility components ───────────────────────────────────────────────────────
 function EnergyBar({ value }: { value: number }) {
-  const color = value >= 70 ? T.accent : value >= 50 ? T.warn : T.danger;
+  const color = value >= 70 ? T.accent : value >= 50 ? warn : danger;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <Zap size={12} color={color} strokeWidth={2.4} />
@@ -175,7 +163,7 @@ function RestBadge({ hours }: { hours: number }) {
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '3px 8px', borderRadius: 999,
-      background: ok ? T.accentSoft : T.warnSoft,
+      background: ok ? T.accentSoft : warnSoft,
       color: ok ? '#1F7A53' : '#92400E',
       fontSize: 10.5, fontWeight: 600, fontFamily: FONT,
       border: `1px solid ${ok ? '#C6ECD8' : '#FDE68A'}`,
@@ -226,12 +214,14 @@ function BlockRow({ block, onAccept, onReject }: BlockRowProps) {
       {/* Card */}
       <div style={{
         flex: 1,
-        background: isProposalPending ? T.surface : c.bg,
+        ...(isProposalPending ? glass(12) : {}),
+        background: isProposalPending ? undefined : c.bg,
         borderRadius: 12,
         padding: '10px 12px',
         border: isProposalPending
           ? `1.5px dashed ${c.border}`
           : `1px solid ${c.border}`,
+        boxShadow: isProposalPending ? glass(12).boxShadow : undefined,
         position: 'relative',
         textDecoration: isRejected ? 'line-through' : 'none',
       }}>
@@ -313,7 +303,7 @@ function BlockRow({ block, onAccept, onReject }: BlockRowProps) {
               style={{
                 flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                 padding: '7px 8px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: T.primary, color: '#fff', fontSize: 11.5, fontWeight: 600,
+                background: BRAND_GRADIENT, color: '#fff', fontSize: 11.5, fontWeight: 700,
                 fontFamily: FONT, outline: 'none',
               }}
             >
@@ -324,7 +314,7 @@ function BlockRow({ block, onAccept, onReject }: BlockRowProps) {
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                 padding: '7px 10px', borderRadius: 8,
                 border: `1px solid ${T.border}`, cursor: 'pointer',
-                background: T.surface, color: T.textSec, fontSize: 11.5, fontWeight: 500,
+                background: T.surfaceAlt, color: T.textSec, fontSize: 11.5, fontWeight: 500,
                 fontFamily: FONT, outline: 'none',
               }}
             >
@@ -337,7 +327,7 @@ function BlockRow({ block, onAccept, onReject }: BlockRowProps) {
                 width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 padding: '7px 0', borderRadius: 8,
                 border: `1px solid ${T.border}`, cursor: 'pointer',
-                background: T.surface, color: T.danger,
+                background: T.surfaceAlt, color: danger,
                 outline: 'none',
               }}
             >
@@ -356,6 +346,8 @@ export function SmartScheduleProposer() {
   const [week, setWeek] = useState<DayPlan[]>(INITIAL_WEEK);
   const [activeFilter, setActiveFilter] = useState<string>('sleep');
   const [regenerating, setRegenerating] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [showIntegrationFlow, setShowIntegrationFlow] = useState(false);
 
   const proposedCount = useMemo(
     () => week.reduce((n, d) => n + d.blocks.filter(b => b.proposed && b.status === 'pending').length, 0),
@@ -374,6 +366,20 @@ export function SmartScheduleProposer() {
   };
 
   const regenerate = () => {
+    if (!calendarConnected) {
+      setShowIntegrationFlow(true);
+      return;
+    }
+    setRegenerating(true);
+    setTimeout(() => {
+      setWeek(INITIAL_WEEK.map(d => ({ ...d, blocks: d.blocks.map(b => ({ ...b })) })));
+      setRegenerating(false);
+    }, 900);
+  };
+
+  const handleCalendarConnected = (_service: ConnectService, _items: string[]) => {
+    setCalendarConnected(true);
+    setShowIntegrationFlow(false);
     setRegenerating(true);
     setTimeout(() => {
       setWeek(INITIAL_WEEK.map(d => ({ ...d, blocks: d.blocks.map(b => ({ ...b })) })));
@@ -385,20 +391,23 @@ export function SmartScheduleProposer() {
     <PhoneFrame statusBarBg={T.bg}>
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        background: T.bg, overflow: 'hidden', fontFamily: FONT,
+        background: 'transparent', overflow: 'hidden', fontFamily: FONT,
       }}>
-        {/* ── Top bar ── */}
+        {/* ── Top bar (translucent glass, sticky) ── */}
         <div style={{
           padding: '12px 20px 8px',
           display: 'flex', alignItems: 'center', gap: 12,
-          background: T.bg,
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          background: 'rgba(255,255,255,0.55)',
+          borderBottom: `1px solid ${T.border}`,
         }}>
           <button
             onClick={() => navigate('/schedule')}
             aria-label="Back"
             style={{
               width: 36, height: 36, borderRadius: 12,
-              background: T.surface, border: `1px solid ${T.border}`,
+              ...glass(12),
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', outline: 'none',
             }}
@@ -417,12 +426,12 @@ export function SmartScheduleProposer() {
 
         {/* ── Scrollable body ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 24px' }}>
-          {/* ── Sync status + AI insight ── */}
+          {/* ── Sync status + AI insight (Brand Gradient hero) ── */}
           <div style={{
-            background: `linear-gradient(135deg, ${T.primary} 0%, ${T.primaryDeep} 100%)`,
+            background: BRAND_GRADIENT,
             borderRadius: 18, padding: 16, color: '#fff',
             marginTop: 8, marginBottom: 16,
-            boxShadow: '0 10px 30px -12px rgba(79,99,210,0.55)',
+            boxShadow: '0 10px 30px -12px rgba(16,185,129,0.40)',
             position: 'relative', overflow: 'hidden',
           }}>
             {/* decorative glow */}
@@ -477,9 +486,8 @@ export function SmartScheduleProposer() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {week.map(day => (
               <div key={day.id} style={{
-                background: T.surface, borderRadius: 16,
-                border: `1px solid ${T.borderSoft}`,
-                padding: 14, boxShadow: '0 1px 2px rgba(15,23,42,0.03)',
+                ...glass(16),
+                padding: 14,
               }}>
                 {/* Day header */}
                 <div style={{
@@ -540,10 +548,34 @@ export function SmartScheduleProposer() {
 
           {/* ── Controls ── */}
           <div style={{
+            ...glass(16),
             marginTop: 20, padding: 16,
-            background: T.surface, borderRadius: 16,
-            border: `1px solid ${T.borderSoft}`,
           }}>
+            {/* Calendar connect nudge */}
+            {!calendarConnected && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: T.primarySoft, borderRadius: 12,
+                padding: '10px 12px', marginBottom: 12,
+              }}>
+                <Calendar size={15} color={T.primary} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+                <p style={{ flex: 1, fontSize: 11.5, color: T.primary, lineHeight: 1.4, fontFamily: FONT }}>
+                  Connect Google Calendar for smarter shift placement
+                </p>
+                <button
+                  onClick={() => setShowIntegrationFlow(true)}
+                  style={{
+                    background: T.primary, color: '#fff', border: 'none',
+                    borderRadius: 8, padding: '5px 10px',
+                    fontSize: 11, fontWeight: 700, fontFamily: FONT,
+                    cursor: 'pointer', flexShrink: 0, outline: 'none',
+                  }}
+                >
+                  Connect
+                </button>
+              </div>
+            )}
+
             <button
               onClick={regenerate}
               disabled={regenerating}
@@ -605,6 +637,15 @@ export function SmartScheduleProposer() {
         </div>
 
         <AppBottomNav />
+
+        {/* Contextual calendar integration overlay */}
+        {showIntegrationFlow && (
+          <IntegrationConnectFlow
+            service="google-calendar"
+            onBack={() => setShowIntegrationFlow(false)}
+            onConnected={handleCalendarConnected}
+          />
+        )}
       </div>
     </PhoneFrame>
   );

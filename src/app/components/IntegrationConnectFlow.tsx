@@ -15,14 +15,10 @@ import {
   Clock, Globe, Lock, FileText, Star,
 } from 'lucide-react';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const T = {
-  primary: '#4F63D2', primarySoft: '#EEF0FD',
-  accent: '#7CC8A4',  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',      surface: '#FFFFFF', surfaceAlt: '#F9F8F6',
-  text: '#1A1A2E',    textSec: '#64748B', textMuted: '#94A3B8',
-  border: '#E2E8F0',  borderSoft: '#F1F5F9',
-};
+import { T as THEME, BRAND_GRADIENT, glass } from '../theme/glass';
+
+// ─── Design Tokens (ZenManager – Liquid Glass) ──────────────────────────────────
+const T = THEME;
 
 export type ConnectService = 'google-calendar' | 'notion';
 type Step = 'intro' | 'authorizing' | 'selecting' | 'success';
@@ -278,8 +274,7 @@ function IntroStep({
       <div style={{ padding: '18px 20px', flex: 1 }}>
         {/* Permissions */}
         <div style={{
-          background: T.surface, borderRadius: 18, padding: '16px 16px 8px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 14,
+          ...glass(18), padding: '16px 16px 8px', marginBottom: 14,
         }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: T.textMuted,
             textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>
@@ -590,9 +585,8 @@ function SuccessStep({
 
       {/* Preview card */}
       <div style={{
-        width: '100%',
-        background: T.surface, borderRadius: 18, padding: '14px 16px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+        ...glass(18),
+        width: '100%', padding: '14px 16px',
         marginBottom: 20,
         opacity: animIn ? 1 : 0,
         transition: 'opacity 0.4s ease 0.3s',
@@ -645,10 +639,10 @@ function SuccessStep({
         style={{
           width: '100%', marginTop: 16, padding: '14px 0',
           borderRadius: 16, border: 'none',
-          background: T.primary, color: '#fff',
+          background: BRAND_GRADIENT, color: '#fff',
           fontFamily: "'DM Sans', sans-serif",
           fontSize: 14, fontWeight: 700, cursor: 'pointer',
-          boxShadow: '0 6px 20px rgba(79,99,210,0.35)',
+          boxShadow: '0 6px 18px rgba(16,185,129,0.10)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           opacity: animIn ? 1 : 0,
           transition: 'opacity 0.4s ease 0.4s',
@@ -704,18 +698,20 @@ export function IntegrationConnectFlow({
       style={{
         position: 'absolute', inset: 0, zIndex: 50,
         display: 'flex', flexDirection: 'column',
-        background: T.bg,
+        background: 'transparent',
         transform: visible ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
       }}
     >
       {/* ── Header ── */}
       <div style={{
-        height: 54, background: T.surface,
-        borderBottom: `1px solid ${T.border}`,
+        height: 54,
+        background: 'rgba(255,255,255,0.55)',
+        backdropFilter: 'blur(24px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+        borderBottom: '1px solid rgba(255,255,255,0.5)',
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '0 16px', flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
       }}>
         {/* Back / close */}
         <button

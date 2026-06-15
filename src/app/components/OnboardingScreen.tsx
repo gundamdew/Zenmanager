@@ -8,26 +8,38 @@ import {
   ArrowLeft,
   Sparkles,
   Coffee,
-  Calendar,
-  Zap,
   CheckCircle,
 } from 'lucide-react';
 import { PhoneFrame } from './PhoneFrame';
+import { BrandLogo } from './BrandLogo';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens (ZenManager – Liquid Glass) ──────────────────────────────────
 const T = {
-  primary: '#4F63D2',
-  primarySoft: '#EEF0FD',
-  primaryMid: '#C7CDF7',
-  accent: '#7CC8A4',
-  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',
-  surface: '#FFFFFF',
-  text: '#1A1A2E',
-  textSec: '#64748B',
-  textMuted: '#94A3B8',
-  border: '#E2E8F0',
-  borderSoft: '#F1F5F9',
+  primary: '#10B981',          // brand green (solid accent / active state)
+  primarySoft: 'rgba(16,185,129,0.10)',
+  primaryMid: 'rgba(16,185,129,0.25)',
+  accent: '#2ECC71',
+  accentSoft: 'rgba(46,204,113,0.10)',
+  bg: '#FAFAFA',               // background base
+  surface: 'rgba(255,255,255,0.6)', // liquid glass surface
+  text: '#222222',             // text primary
+  textSec: '#717171',          // text secondary
+  textMuted: '#9A9A9A',
+  border: 'rgba(255,255,255,0.4)',  // glass border
+  borderSoft: 'rgba(0,0,0,0.06)',
+};
+
+// Brand gradient (accent) — primary CTAs & active states
+const BRAND_GRADIENT = 'linear-gradient(135deg, #2ECC71 0%, #10B981 100%)';
+
+// Liquid Glass container style (Card / Modal / floating containers)
+const GLASS: CSSProperties = {
+  background: 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  border: '1px solid rgba(255,255,255,0.4)',
+  borderRadius: 24,
+  boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
 };
 
 // ─── Preferences Model ────────────────────────────────────────────────────────
@@ -36,8 +48,6 @@ export interface Preferences {
   maxContinuousHours: number;
   requireFrequentBreaks: boolean;
   breakIntervalMins: number;
-  allowWeekendShifting: boolean;
-  focusMode: boolean;
 }
 
 const DEFAULT_PREFS: Preferences = {
@@ -45,8 +55,6 @@ const DEFAULT_PREFS: Preferences = {
   maxContinuousHours: 2,
   requireFrequentBreaks: true,
   breakIntervalMins: 30,
-  allowWeekendShifting: false,
-  focusMode: true,
 };
 
 // ─── Shared Sub-Components ────────────────────────────────────────────────────
@@ -102,13 +110,12 @@ function RowCard({
   return (
     <div
       style={{
-        background: T.surface,
-        borderRadius: 18,
+        ...GLASS,
+        borderRadius: 16,
         padding: '18px 20px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
         ...style,
       }}
     >
@@ -132,228 +139,6 @@ function StepDots({ total, current }: { total: number; current: number }) {
           }}
         />
       ))}
-    </div>
-  );
-}
-
-// ─── ZenSync Logo SVG ─────────────────────────────────────────────────────────
-function ZenSyncLogo({ size = 56 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 56 56" fill="none">
-      <rect width="56" height="56" rx="16" fill={T.primary} />
-      {/* Two interlocking arcs — "sync" metaphor */}
-      <path
-        d="M14 28 C14 20.268 20.268 14 28 14"
-        stroke="white"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.5"
-      />
-      <path
-        d="M28 14 C35.732 14 42 20.268 42 28"
-        stroke="white"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path
-        d="M42 28 C42 35.732 35.732 42 28 42"
-        stroke="white"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.5"
-      />
-      <path
-        d="M28 42 C20.268 42 14 35.732 14 28"
-        stroke="white"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-      {/* Center dot */}
-      <circle cx="28" cy="28" r="5" fill="white" />
-      {/* Arrow tip top */}
-      <path d="M25 12 L28 14 L31 12" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      {/* Arrow tip bottom */}
-      <path d="M25 44 L28 42 L31 44" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  );
-}
-
-// ─── Step 0: Welcome ──────────────────────────────────────────────────────────
-function WelcomeStep({ onNext }: { onNext: () => void }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        background: `linear-gradient(168deg, ${T.primarySoft} 0%, ${T.bg} 55%)`,
-        padding: '0 28px 32px',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Top illustration area */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 24,
-          paddingTop: 20,
-        }}
-      >
-        {/* Floating card mockups */}
-        <div style={{ position: 'relative', width: 280, height: 200 }}>
-          {/* Background card 1 */}
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 30,
-              width: 200,
-              background: '#fff',
-              borderRadius: 16,
-              padding: '14px 16px',
-              boxShadow: '0 8px 24px rgba(79,99,210,0.12)',
-              transform: 'rotate(-6deg)',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#F59E0B' }} />
-              <div style={{ width: 90, height: 8, background: '#FDE68A', borderRadius: 4 }} />
-            </div>
-            <div style={{ width: '100%', height: 6, background: T.borderSoft, borderRadius: 4, marginBottom: 5 }} />
-            <div style={{ width: '70%', height: 6, background: T.borderSoft, borderRadius: 4 }} />
-          </div>
-          {/* Background card 2 */}
-          <div
-            style={{
-              position: 'absolute',
-              right: 0,
-              top: 10,
-              width: 195,
-              background: '#fff',
-              borderRadius: 16,
-              padding: '14px 16px',
-              boxShadow: '0 8px 24px rgba(79,99,210,0.12)',
-              transform: 'rotate(5deg)',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#10B981' }} />
-              <div style={{ width: 80, height: 8, background: '#A7F3D0', borderRadius: 4 }} />
-            </div>
-            <div style={{ width: '100%', height: 6, background: T.borderSoft, borderRadius: 4, marginBottom: 5 }} />
-            <div style={{ width: '60%', height: 6, background: T.borderSoft, borderRadius: 4 }} />
-          </div>
-          {/* Center logo card */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -30%)',
-              background: '#fff',
-              borderRadius: 24,
-              padding: '20px',
-              boxShadow: '0 16px 48px rgba(79,99,210,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 10,
-              zIndex: 2,
-            }}
-          >
-            <ZenSyncLogo size={52} />
-            <div style={{ display: 'flex', gap: 4 }}>
-              {[T.accent, T.primary, '#F59E0B'].map((c, i) => (
-                <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Headline */}
-        <div style={{ textAlign: 'center' }}>
-          <h1
-            style={{
-              fontSize: 30,
-              fontWeight: 700,
-              color: T.text,
-              letterSpacing: '-0.8px',
-              lineHeight: 1.2,
-              marginBottom: 12,
-            }}
-          >
-            Less chaos,<br />
-            <span style={{ color: T.primary }}>more flow.</span>
-          </h1>
-          <p style={{ fontSize: 15, color: T.textSec, lineHeight: 1.6, maxWidth: 290 }}>
-            ZenSync learns your schedule and builds a calm, realistic daily plan — automatically.
-          </p>
-        </div>
-
-        {/* Feature pills */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {[
-            { icon: <Zap size={13} />, label: 'AI-Optimized' },
-            { icon: <Coffee size={13} />, label: 'Break-Aware' },
-            { icon: <Calendar size={13} />, label: 'Sync-Ready' },
-          ].map(({ icon, label }) => (
-            <div
-              key={label}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-                background: T.surface,
-                border: `1px solid ${T.border}`,
-                borderRadius: 20,
-                padding: '6px 12px',
-                color: T.textSec,
-                fontSize: 12,
-                fontWeight: 500,
-              }}
-            >
-              {icon}
-              {label}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CTA */}
-      <button
-        onClick={onNext}
-        style={{
-          width: '100%',
-          background: T.primary,
-          color: '#fff',
-          border: 'none',
-          borderRadius: 18,
-          padding: '17px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          boxShadow: '0 8px 28px rgba(79,99,210,0.4)',
-          fontSize: 16,
-          fontWeight: 600,
-          letterSpacing: '-0.2px',
-        }}
-      >
-        Get Started
-        <ArrowRight size={18} />
-      </button>
-      <p style={{ textAlign: 'center', fontSize: 12, color: T.textMuted, marginTop: 12 }}>
-        Takes about 60 seconds
-      </p>
     </div>
   );
 }
@@ -480,10 +265,8 @@ function RhythmStep({
       {/* Max Continuous Hours */}
       <div
         style={{
-          background: T.surface,
-          borderRadius: 20,
+          ...GLASS,
           padding: '20px 20px 16px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
           marginBottom: 24,
         }}
       >
@@ -578,11 +361,10 @@ function RhythmStep({
         <button
           onClick={onBack}
           style={{
-            width: 52,
-            height: 52,
+            ...GLASS,
+            width: 56,
+            height: 56,
             borderRadius: 16,
-            border: `1.5px solid ${T.border}`,
-            background: T.surface,
             color: T.textSec,
             cursor: 'pointer',
             display: 'flex',
@@ -597,18 +379,19 @@ function RhythmStep({
           onClick={onNext}
           style={{
             flex: 1,
-            background: T.primary,
+            height: 56,
+            background: BRAND_GRADIENT,
             color: '#fff',
             border: 'none',
             borderRadius: 16,
-            padding: '16px',
+            padding: '0 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
             cursor: 'pointer',
-            fontSize: 15,
-            fontWeight: 600,
+            fontSize: 16,
+            fontWeight: 700,
           }}
         >
           Continue
@@ -665,7 +448,7 @@ function RulesStep({
       </div>
 
       {/* Require Frequent Breaks */}
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 28 }}>
         <RowCard>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div
@@ -749,83 +532,15 @@ function RulesStep({
         )}
       </div>
 
-      {/* Allow Weekend Shifting */}
-      <RowCard style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              background: prefs.allowWeekendShifting ? T.primarySoft : T.borderSoft,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.3s',
-            }}
-          >
-            <Calendar
-              size={20}
-              color={prefs.allowWeekendShifting ? T.primary : T.textMuted}
-            />
-          </div>
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 2 }}>
-              Shift to weekends
-            </p>
-            <p style={{ fontSize: 12, color: T.textSec }}>
-              Move overflow tasks to Sat/Sun
-            </p>
-          </div>
-        </div>
-        <Toggle
-          value={prefs.allowWeekendShifting}
-          onChange={(v) => setPrefs({ ...prefs, allowWeekendShifting: v })}
-        />
-      </RowCard>
-
-      {/* Focus Mode */}
-      <RowCard style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 13,
-              background: prefs.focusMode ? T.primarySoft : T.borderSoft,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.3s',
-            }}
-          >
-            <Zap size={20} color={prefs.focusMode ? T.primary : T.textMuted} />
-          </div>
-          <div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 2 }}>
-              Deep focus mode
-            </p>
-            <p style={{ fontSize: 12, color: T.textSec }}>
-              Minimize distractions during study blocks
-            </p>
-          </div>
-        </div>
-        <Toggle
-          value={prefs.focusMode}
-          onChange={(v) => setPrefs({ ...prefs, focusMode: v })}
-        />
-      </RowCard>
-
       {/* Navigation */}
       <div style={{ display: 'flex', gap: 12 }}>
         <button
           onClick={onBack}
           style={{
-            width: 52,
-            height: 52,
+            ...GLASS,
+            width: 56,
+            height: 56,
             borderRadius: 16,
-            border: `1.5px solid ${T.border}`,
-            background: T.surface,
             color: T.textSec,
             cursor: 'pointer',
             display: 'flex',
@@ -840,18 +555,19 @@ function RulesStep({
           onClick={onNext}
           style={{
             flex: 1,
-            background: T.primary,
+            height: 56,
+            background: BRAND_GRADIENT,
             color: '#fff',
             border: 'none',
             borderRadius: 16,
-            padding: '16px',
+            padding: '0 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
             cursor: 'pointer',
-            fontSize: 15,
-            fontWeight: 600,
+            fontSize: 16,
+            fontWeight: 700,
           }}
         >
           Continue
@@ -892,10 +608,6 @@ function ReadyStep({
         ? `☕ Every ${prefs.breakIntervalMins} min`
         : '🔁 Minimal breaks',
     },
-    {
-      label: 'Weekend flexibility',
-      value: prefs.allowWeekendShifting ? '📅 Allowed' : '🚫 Weekdays only',
-    },
   ];
 
   return (
@@ -906,7 +618,7 @@ function ReadyStep({
         flexDirection: 'column',
         overflowY: 'auto',
         padding: '0 24px 28px',
-        background: `linear-gradient(168deg, ${T.primarySoft} 0%, ${T.bg} 50%)`,
+        background: `linear-gradient(168deg, rgba(46,204,113,0.12) 0%, ${T.bg} 50%)`,
       }}
       className="zs-scroll"
     >
@@ -924,20 +636,8 @@ function ReadyStep({
           paddingBottom: 28,
         }}
       >
-        <div
-          style={{
-            width: 76,
-            height: 76,
-            borderRadius: 24,
-            background: T.primary,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-            boxShadow: '0 12px 32px rgba(79,99,210,0.35)',
-          }}
-        >
-          <CheckCircle size={38} color="#fff" strokeWidth={2} />
+        <div style={{ marginBottom: 16 }}>
+          <BrandLogo size={76} />
         </div>
         <h2
           style={{
@@ -961,13 +661,12 @@ function ReadyStep({
           <div
             key={label}
             style={{
-              background: T.surface,
+              ...GLASS,
               borderRadius: 16,
               padding: '14px 18px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.04)',
             }}
           >
             <span style={{ fontSize: 13, color: T.textSec }}>{label}</span>
@@ -981,19 +680,20 @@ function ReadyStep({
         onClick={onNext}
         style={{
           width: '100%',
-          background: T.primary,
+          height: 56,
+          background: BRAND_GRADIENT,
           color: '#fff',
           border: 'none',
-          borderRadius: 18,
-          padding: '17px 24px',
+          borderRadius: 16,
+          padding: '0 24px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
           cursor: 'pointer',
-          boxShadow: '0 8px 28px rgba(79,99,210,0.4)',
+          boxShadow: '0 8px 24px rgba(16,185,129,0.10)',
           fontSize: 16,
-          fontWeight: 600,
+          fontWeight: 700,
           marginBottom: 12,
         }}
       >
@@ -1026,7 +726,7 @@ export function OnboardingScreen() {
   const [prefs, setPrefs] = useState<Preferences>(DEFAULT_PREFS);
 
   const goNext = () => {
-    if (step === 3) {
+    if (step === 2) {
       localStorage.setItem('zensync_prefs', JSON.stringify(prefs));
       navigate('/dashboard');
     } else {
@@ -1037,7 +737,6 @@ export function OnboardingScreen() {
   const goBack = () => setStep((s) => Math.max(0, s - 1));
 
   const screens = [
-    <WelcomeStep key="welcome" onNext={goNext} />,
     <RhythmStep key="rhythm" prefs={prefs} setPrefs={setPrefs} onNext={goNext} onBack={goBack} />,
     <RulesStep key="rules" prefs={prefs} setPrefs={setPrefs} onNext={goNext} onBack={goBack} />,
     <ReadyStep key="ready" prefs={prefs} onNext={goNext} onBack={goBack} />,
@@ -1046,6 +745,10 @@ export function OnboardingScreen() {
   return (
     <PhoneFrame>
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Brand bar */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 24px 4px', flexShrink: 0 }}>
+          <BrandLogo size={30} wordmark title="ZenManager" />
+        </div>
         {screens[step]}
       </div>
     </PhoneFrame>

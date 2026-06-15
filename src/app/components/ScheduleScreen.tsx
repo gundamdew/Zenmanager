@@ -8,7 +8,7 @@
  *  - Conflict Indicator: Low Sleep Warning when a late work shift
  *    is immediately followed by an early-morning lecture next day
  */
-import { useState } from 'react';
+import { useState, CSSProperties } from 'react';
 import {
   GraduationCap,
   Briefcase,
@@ -24,13 +24,26 @@ import {
 import { PhoneFrame } from './PhoneFrame';
 import { AppBottomNav } from './AppBottomNav';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
+// ─── Design Tokens (ZenManager – Liquid Glass) ──────────────────────────────────
 const T = {
-  primary: '#4F63D2', primarySoft: '#EEF0FD',
-  accent: '#7CC8A4',  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',      surface: '#FFFFFF',  surfaceAlt: '#F9F8F6',
-  text: '#1A1A2E',    textSec: '#64748B',  textMuted: '#94A3B8',
-  border: '#E2E8F0',  borderSoft: '#F1F5F9',
+  primary: '#10B981', primarySoft: 'rgba(16,185,129,0.10)',
+  accent: '#2ECC71',  accentSoft: 'rgba(46,204,113,0.10)',
+  bg: '#FAFAFA',      surface: 'rgba(255,255,255,0.6)',  surfaceAlt: 'rgba(255,255,255,0.45)',
+  text: '#222222',    textSec: '#717171',  textMuted: '#9A9A9A',
+  border: 'rgba(255,255,255,0.4)',  borderSoft: 'rgba(0,0,0,0.06)',
+};
+
+// Brand gradient (accent) — primary CTAs & active states
+const BRAND_GRADIENT = 'linear-gradient(135deg, #2ECC71 0%, #10B981 100%)';
+
+// Liquid Glass container style
+const GLASS: CSSProperties = {
+  background: 'rgba(255,255,255,0.6)',
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  border: '1px solid rgba(255,255,255,0.4)',
+  borderRadius: 24,
+  boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
 };
 
 // ─── Category colour map ───────────────────────────────────────────────────────
@@ -459,15 +472,16 @@ function WeeklyView({ onSelectDay }: { onSelectDay: (d: number) => void }) {
             key={di}
             onClick={() => onSelectDay(di)}
             style={{
+              ...GLASS,
               width:'100%',
-              background: isToday ? T.primarySoft : T.surface,
-              border: isToday ? `1.5px solid ${T.primary}` : `1.5px solid ${T.border}`,
-              borderRadius:18,
+              background: isToday ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.6)',
+              border: isToday ? `1.5px solid ${T.primary}` : '1px solid rgba(255,255,255,0.4)',
+              borderRadius:16,
               padding:'14px 16px',
               marginBottom:10,
               cursor:'pointer',
               textAlign:'left',
-              boxShadow: isToday ? '0 4px 20px rgba(79,99,210,0.12)' : '0 2px 10px rgba(0,0,0,0.04)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
               outline:'none',
             }}
           >
@@ -627,7 +641,7 @@ function MonthlyView({ monthOffset, onSelectDay }: { monthOffset: number; onSele
 
       {/* Legend */}
       <div style={{
-        marginTop:16, background:T.surface, borderRadius:14, padding:'12px 16px',
+        ...GLASS, marginTop:16, borderRadius:16, padding:'12px 16px',
         display:'flex', flexWrap:'wrap', gap:'10px 20px',
       }}>
         {Object.entries(CAT).map(([key, cfg]) => (
@@ -671,16 +685,18 @@ export function ScheduleScreen() {
 
   return (
     <PhoneFrame>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:T.bg }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'transparent' }}>
 
         {/* ── Sticky Header ── */}
         <div style={{
           padding:'10px 16px 12px',
-          background: T.surface,
-          borderBottom:`1px solid ${T.border}`,
+          background: 'rgba(255,255,255,0.6)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderBottom:'1px solid rgba(255,255,255,0.4)',
           flexShrink:0,
           zIndex:10,
-          boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
+          boxShadow:'0 4px 16px rgba(0,0,0,0.04)',
         }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
 

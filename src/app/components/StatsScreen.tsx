@@ -3,34 +3,29 @@
  * Includes:
  *  - Key metric chips (total hrs, work%, break score)
  *  - Weekly Load Balance BarChart (Recharts)
- *  - Burnout Risk Gauge (Recharts PieChart semicircle)
+ *  - Burnout Risk Gauge (SVG semicircle)
  *  - Actionable insight cards
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, Legend,
-  PieChart, Pie,
+  Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import {
   Sparkles, TrendingUp, TrendingDown, AlertTriangle,
   Clock, Zap, Coffee, ChevronLeft, ChevronRight,
   BookOpen, Briefcase, CheckCircle2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { PhoneFrame } from './PhoneFrame';
 import { AppBottomNav } from './AppBottomNav';
+import { Skeleton } from './ui/skeleton';
+import { T, BRAND_GRADIENT, glass } from '../theme/glass';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const T = {
-  primary: '#4F63D2', primarySoft: '#EEF0FD',
-  accent: '#7CC8A4',  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',      surface: '#FFFFFF', surfaceAlt: '#F9F8F6',
-  text: '#1A1A2E',    textSec: '#64748B', textMuted: '#94A3B8',
-  border: '#E2E8F0',  borderSoft: '#F1F5F9',
-};
+// ─── Chart colors ─────────────────────────────────────────────────────────────
 const CHART_COLORS = {
-  study:  '#4F63D2',
-  work:   '#10B981',
+  study:  '#10B981',
+  work:   '#2ECC71',
   breaks: '#94A3B8',
 };
 
@@ -75,9 +70,8 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background: T.surface, border:`1px solid ${T.border}`,
-      borderRadius:12, padding:'10px 14px',
-      boxShadow:'0 8px 24px rgba(0,0,0,0.12)',
+      ...glass(12),
+      padding:'10px 14px',
     }}>
       <p style={{ fontSize:12, fontWeight:700, color:T.text, marginBottom:6 }}>{label}</p>
       {payload.map((p: any) => (
@@ -91,22 +85,37 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
-// ─── Burnout gauge (semi-circle PieChart) ─────────────────────────────────────
+// ─── Burnout gauge (SVG semicircle, no Recharts) ──────────────────────────────
 function BurnoutGauge({ score }: { score: number }) {
   const level = score < 40 ? 'Low' : score < 65 ? 'Moderate' : score < 80 ? 'Elevated' : 'High';
   const color = score < 40 ? T.accent : score < 65 ? T.primary : score < 80 ? '#F97316' : '#EF4444';
   const softBg = score < 40 ? T.accentSoft : score < 65 ? T.primarySoft : score < 80 ? '#FFF7ED' : '#FEF2F2';
 
-  const gaugeData = [
-    { value: score,       name: 'risk'  },
-    { value: 100 - score, name: 'empty' },
+  // SVG arc helpers — math angles: 0=right, 90=top, 180=left
+  const CX = 110, CY = 110, OR = 78, IR = 58;
+  const pt = (r: number, deg: number): [number, number] => [
+    CX + r * Math.cos((deg * Math.PI) / 180),
+    CY - r * Math.sin((deg * Math.PI) / 180),
   ];
+
+  // Track: full 180° ring from left (180°) to right (0°), clockwise through top
+  const [ox1, oy1] = pt(OR, 180);
+  const [ox2, oy2] = pt(OR, 0);
+  const [ix2, iy2] = pt(IR, 0);
+  const [ix1, iy1] = pt(IR, 180);
+  const trackD = `M ${ox1} ${oy1} A ${OR} ${OR} 0 0 1 ${ox2} ${oy2} L ${ix2} ${iy2} A ${IR} ${IR} 0 0 0 ${ix1} ${iy1} Z`;
+
+  // Score arc: from 180° clockwise to (180 − score×1.8)°, always ≤ 180° so largeArc=0
+  const endDeg = 180 - score * 1.8;
+  const [sox, soy] = pt(OR, endDeg);
+  const [six, siy] = pt(IR, endDeg);
+  const scoreD = score <= 0 ? null :
+    `M ${ox1} ${oy1} A ${OR} ${OR} 0 0 1 ${sox} ${soy} L ${six} ${siy} A ${IR} ${IR} 0 0 0 ${ix1} ${iy1} Z`;
 
   return (
     <div style={{
-      background: T.surface, borderRadius:22,
+      ...glass(24),
       padding:'18px 20px 12px',
-      boxShadow:'0 4px 20px rgba(0,0,0,0.06)',
       marginBottom:16,
     }}>
       {/* Title */}
@@ -126,32 +135,12 @@ function BurnoutGauge({ score }: { score: number }) {
         Based on your hours logged this week
       </p>
 
-      {/* Semicircle gauge */}
+      {/* Semicircle gauge — pure SVG, no Recharts */}
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', position:'relative' }}>
-        <PieChart width={220} height={120}>
-          {/* Track */}
-          <Pie
-            data={[{ value: 100 }]}
-            cx="50%" cy="100%"
-            startAngle={180} endAngle={0}
-            innerRadius={58} outerRadius={78}
-            dataKey="value" strokeWidth={0}
-          >
-            <Cell key="track-bg" fill={T.borderSoft} />
-          </Pie>
-          {/* Score arc */}
-          <Pie
-            data={gaugeData}
-            cx="50%" cy="100%"
-            startAngle={180} endAngle={0}
-            innerRadius={58} outerRadius={78}
-            dataKey="value" strokeWidth={0}
-            cornerRadius={6}
-          >
-            <Cell key="arc-risk"  fill={color} />
-            <Cell key="arc-empty" fill="transparent" />
-          </Pie>
-        </PieChart>
+        <svg width={220} height={116} viewBox="0 0 220 116" style={{ display:'block' }}>
+          <path d={trackD} fill={T.borderSoft} />
+          {scoreD && <path d={scoreD} fill={color} />}
+        </svg>
 
         {/* Score label (centred over gauge) */}
         <div style={{
@@ -207,9 +196,8 @@ function InsightCard({ icon, title, body, accent, accentBg, trend, trendLabel }:
 
   return (
     <div style={{
-      background: T.surface, borderRadius:18,
+      ...glass(16),
       padding:'14px 16px', marginBottom:10,
-      boxShadow:'0 2px 10px rgba(0,0,0,0.05)',
       display:'flex', alignItems:'flex-start', gap:12,
     }}>
       <div style={{
@@ -242,8 +230,9 @@ function MetricChip({ icon, label, value, color, bg }: {
 }) {
   return (
     <div style={{
-      flex:1, background: T.surface, borderRadius:16,
-      padding:'12px 10px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)',
+      ...glass(16),
+      flex:1,
+      padding:'12px 10px',
       display:'flex', flexDirection:'column', alignItems:'center', gap:4,
     }}>
       <div style={{
@@ -258,23 +247,115 @@ function MetricChip({ icon, label, value, color, bg }: {
   );
 }
 
+// ─── Skeleton Components ──────────────────────────────────────────────────────
+function MetricChipSkeleton() {
+  return (
+    <div style={{ ...glass(16), flex: 1, padding: '12px 10px',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', gap: 6 }}>
+      <Skeleton className="h-9 w-9 rounded-xl" />
+      <Skeleton className="h-5 w-12" />
+      <Skeleton className="h-2 w-14" />
+    </div>
+  );
+}
+
+function ChartSkeleton() {
+  return (
+    <div style={{ ...glass(24), padding: '16px 12px 10px',
+      marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', paddingLeft: 8, paddingRight: 4, marginBottom: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <Skeleton className="h-7 w-7 rounded-lg" />
+          <Skeleton className="h-7 w-7 rounded-lg" />
+        </div>
+      </div>
+      <Skeleton className="h-44 w-full rounded-xl" />
+    </div>
+  );
+}
+
+function GaugeSkeleton() {
+  return (
+    <div style={{ ...glass(24), padding: '18px 20px 12px',
+      marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-44" />
+        </div>
+        <Skeleton className="h-7 w-20 rounded-2xl" />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
+        <Skeleton className="h-28 w-56 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+function StatsEmptyState({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: '48px 32px', gap: 16 }}>
+      <div style={{ width: 72, height: 72, borderRadius: 22,
+        background: T.primarySoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <TrendingUp size={32} color={T.primary} strokeWidth={1.8} />
+      </div>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 6 }}>
+          No data yet
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--zs-color-text-secondary, #64748B)', lineHeight: 1.6, maxWidth: 240 }}>
+          Complete tasks on the Dashboard to start seeing your cognitive load analytics.
+        </p>
+      </div>
+      <button
+        onClick={onNavigate}
+        style={{
+          background: BRAND_GRADIENT, color: '#fff', border: 'none', borderRadius: 16,
+          height: 56, padding: '0 28px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 8,
+          boxShadow: '0 6px 20px rgba(16,185,129,0.10)',
+          minHeight: 'var(--zs-touch-min, 48px)',
+        }}
+      >
+        Go to Dashboard
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function StatsScreen() {
+  const navigate = useNavigate();
   const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, 1 = last week
+  const [isLoading, setIsLoading]   = useState(true);
   const data = weekOffset === 0 ? WEEKLY_DATA : PREV_WEEKLY_DATA;
   const stats = computeStats(data);
 
+  useEffect(() => {
+    const id = setTimeout(() => setIsLoading(false), 1500);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
     <PhoneFrame>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:T.bg }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', background:'transparent' }}>
 
         {/* ── Sticky Header ── */}
         <div style={{
           padding:'10px 20px 12px',
-          background: T.surface,
+          backdropFilter:'blur(24px) saturate(160%)',
+          WebkitBackdropFilter:'blur(24px) saturate(160%)',
+          background:'rgba(255,255,255,0.55)',
           borderBottom:`1px solid ${T.border}`,
           display:'flex', alignItems:'center', justifyContent:'space-between',
-          flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
+          flexShrink:0,
         }}>
           <div>
             <h2 style={{ fontSize:18, fontWeight:700, color:T.text, letterSpacing:'-0.4px' }}>
@@ -296,34 +377,43 @@ export function StatsScreen() {
 
           {/* ── Metric chips ── */}
           <div style={{ display:'flex', gap:8, marginBottom:16 }}>
-            <MetricChip
-              icon={<BookOpen size={16} color={T.primary} />}
-              label="Study hrs"
-              value={`${stats.totalStudy}h`}
-              color={T.primary}
-              bg={T.primarySoft}
-            />
-            <MetricChip
-              icon={<Briefcase size={16} color="#10B981" />}
-              label="Work hrs"
-              value={`${stats.totalWork}h`}
-              color="#065F46"
-              bg="#ECFDF5"
-            />
-            <MetricChip
-              icon={<Coffee size={16} color="#94A3B8" />}
-              label="Break hrs"
-              value={`${stats.totalBreaks}h`}
-              color="#475569"
-              bg="#F8FAFC"
-            />
+            {isLoading ? (
+              <>
+                <MetricChipSkeleton />
+                <MetricChipSkeleton />
+                <MetricChipSkeleton />
+              </>
+            ) : (
+              <>
+                <MetricChip
+                  icon={<BookOpen size={16} color={T.primary} />}
+                  label="Study hrs"
+                  value={`${stats.totalStudy}h`}
+                  color={T.primary}
+                  bg={T.primarySoft}
+                />
+                <MetricChip
+                  icon={<Briefcase size={16} color="#10B981" />}
+                  label="Work hrs"
+                  value={`${stats.totalWork}h`}
+                  color="#065F46"
+                  bg="#ECFDF5"
+                />
+                <MetricChip
+                  icon={<Coffee size={16} color="#94A3B8" />}
+                  label="Break hrs"
+                  value={`${stats.totalBreaks}h`}
+                  color="#475569"
+                  bg="#F8FAFC"
+                />
+              </>
+            )}
           </div>
 
           {/* ── Weekly Load Balance Chart ── */}
-          <div style={{
-            background: T.surface, borderRadius:22,
+          {isLoading ? <ChartSkeleton /> : <div style={{
+            ...glass(24),
             padding:'16px 12px 10px',
-            boxShadow:'0 4px 20px rgba(0,0,0,0.06)',
             marginBottom:16,
           }}>
             {/* Chart header + week navigator */}
@@ -380,7 +470,7 @@ export function StatsScreen() {
                   tickLine={false}
                   tickFormatter={v => `${v}h`}
                 />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(79,99,210,0.04)' }} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill:'rgba(16,185,129,0.06)' }} />
                 <Bar dataKey="study"  fill={CHART_COLORS.study}  radius={[4,4,0,0]} />
                 <Bar dataKey="work"   fill={CHART_COLORS.work}   radius={[4,4,0,0]} />
                 <Bar dataKey="breaks" fill={CHART_COLORS.breaks} radius={[4,4,0,0]} />
@@ -412,13 +502,13 @@ export function StatsScreen() {
                 {(stats.totalStudy + stats.totalWork + stats.totalBreaks).toFixed(1)}h logged
               </span>
             </div>
-          </div>
+          </div>}
 
           {/* ── Burnout Risk Gauge ── */}
-          <BurnoutGauge score={stats.burnout} />
+          {isLoading ? <GaugeSkeleton /> : <BurnoutGauge score={stats.burnout} />}
 
           {/* ── Insights ── */}
-          <div style={{ marginBottom:4 }}>
+          {!isLoading && <div style={{ marginBottom:4 }}>
             <p style={{ fontSize:13, fontWeight:700, color:T.text, letterSpacing:'-0.2px',
               marginBottom:10, paddingLeft:2 }}>
               AI Insights
@@ -459,7 +549,7 @@ export function StatsScreen() {
               accent={T.primary}
               accentBg={T.primarySoft}
             />
-          </div>
+          </div>}
 
           {/* Bottom padding */}
           <div style={{ height:8 }} />

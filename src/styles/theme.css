@@ -39,6 +39,23 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* ── ZenSync design tokens ── */
+  --zs-color-primary: #4F63D2;
+  --zs-color-primary-soft: #EEF0FD;
+  --zs-color-text-secondary: #64748B;
+  --zs-color-text-muted: #94A3B8;
+  --zs-color-bg: #F5F4F0;
+  --zs-color-surface: #FFFFFF;
+  --zs-color-border: #E2E8F0;
+  --zs-space-1: 4px;
+  --zs-space-2: 8px;
+  --zs-space-3: 12px;
+  --zs-space-4: 16px;
+  --zs-space-5: 20px;
+  --zs-space-6: 24px;
+  --zs-touch-min: 48px;
+  --zs-font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .dark {

@@ -15,15 +15,7 @@ import {
 import { PhoneFrame } from './PhoneFrame';
 import { AppBottomNav } from './AppBottomNav';
 import { IntegrationConnectFlow, ConnectService } from './IntegrationConnectFlow';
-
-// ─── Design Tokens ────────────────────────────────────────────────────────────
-const T = {
-  primary: '#4F63D2', primarySoft: '#EEF0FD',
-  accent: '#7CC8A4',  accentSoft: '#E8F7F0',
-  bg: '#F5F4F0',      surface: '#FFFFFF', surfaceAlt: '#F9F8F6',
-  text: '#1A1A2E',    textSec: '#64748B', textMuted: '#94A3B8',
-  border: '#E2E8F0',  borderSoft: '#F1F5F9',
-};
+import { T, BRAND_GRADIENT, glass } from '../theme/glass';
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -74,10 +66,9 @@ function IntegrationCard({ icon, name, status, lastSync, syncedItems, onPress }:
   const connected = status === 'connected';
   return (
     <div style={{
-      background: T.surface, borderRadius:18, padding:'14px 16px',
-      display:'flex', alignItems:'center',
-      boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:10,
-      border: connected ? `1.5px solid ${T.border}` : `1.5px dashed ${T.border}`,
+      ...glass(16), padding:'14px 16px',
+      display:'flex', alignItems:'center', marginBottom:10,
+      border: connected ? '1px solid rgba(255,255,255,0.5)' : `1.5px dashed ${T.borderSoft}`,
     }}>
       <div style={{
         width:44, height:44, borderRadius:14,
@@ -121,9 +112,9 @@ function IntegrationCard({ icon, name, status, lastSync, syncedItems, onPress }:
           onClick={onPress}
           style={{
             display:'flex', alignItems:'center', gap:4,
-            background: T.primary, color:'#fff',
+            background: BRAND_GRADIENT, color:'#fff',
             borderRadius:20, padding:'6px 12px',
-            border:'none', cursor:'pointer', fontSize:11, fontWeight:600,
+            border:'none', cursor:'pointer', fontSize:11, fontWeight:700,
             fontFamily:"'DM Sans', sans-serif", outline:'none',
           }}
         >
@@ -141,9 +132,8 @@ function PrefToggle({ icon, iconBg, label, sub, value, onChange }: {
   value: boolean; onChange: (v: boolean) => void;
 }) {
   return (
-    <div style={{ background:T.surface, borderRadius:18, padding:'14px 16px',
-      display:'flex', alignItems:'center', marginBottom:10,
-      boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+    <div style={{ ...glass(16), padding:'14px 16px',
+      display:'flex', alignItems:'center', marginBottom:10 }}>
       <div style={{ width:42, height:42, borderRadius:13, background:iconBg,
         display:'flex', alignItems:'center', justifyContent:'center',
         marginRight:12, flexShrink:0, transition:'background 0.3s' }}>
@@ -167,8 +157,7 @@ function PrefSlider({ icon, iconBg, label, sub, min, max, step, value, onChange,
   fmt: (v: number) => string;
 }) {
   return (
-    <div style={{ background:T.surface, borderRadius:18, padding:'14px 16px',
-      marginBottom:10, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+    <div style={{ ...glass(16), padding:'14px 16px', marginBottom:10 }}>
       <div style={{ display:'flex', alignItems:'center', marginBottom:12 }}>
         <div style={{ width:42, height:42, borderRadius:13, background:iconBg,
           display:'flex', alignItems:'center', justifyContent:'center',
@@ -199,9 +188,9 @@ function SettingsRow({ icon, iconBg, label, sub, danger, badge }: {
   label: string; sub?: string; danger?: boolean; badge?: string;
 }) {
   return (
-    <div style={{ background:T.surface, borderRadius:16, padding:'12px 16px',
+    <div style={{ ...glass(16), padding:'12px 16px',
       display:'flex', alignItems:'center', marginBottom:8,
-      cursor:'pointer', boxShadow:'0 1px 6px rgba(0,0,0,0.04)' }}>
+      cursor:'pointer' }}>
       <div style={{ width:36, height:36, borderRadius:11, background:iconBg,
         display:'flex', alignItems:'center', justifyContent:'center',
         marginRight:12, flexShrink:0 }}>{icon}</div>
@@ -210,7 +199,7 @@ function SettingsRow({ icon, iconBg, label, sub, danger, badge }: {
         {sub && <p style={{ fontSize:11, color:T.textMuted }}>{sub}</p>}
       </div>
       {badge && (
-        <div style={{ background:'#EFF6FF', color:T.primary, borderRadius:20,
+        <div style={{ background:T.primarySoft, color:T.primary, borderRadius:20,
           padding:'2px 8px', fontSize:10, fontWeight:600, marginRight:6 }}>{badge}</div>
       )}
       <ChevronRight size={16} color={danger ? '#EF4444' : T.textMuted} />
@@ -223,9 +212,9 @@ function Avatar() {
   return (
     <div style={{
       width:76, height:76, borderRadius:'50%',
-      background:'linear-gradient(135deg, #4F63D2 0%, #7C3AED 100%)',
+      background: BRAND_GRADIENT,
       display:'flex', alignItems:'center', justifyContent:'center',
-      boxShadow:'0 8px 24px rgba(79,99,210,0.35)', flexShrink:0,
+      boxShadow:'0 8px 24px rgba(16,185,129,0.30)', flexShrink:0,
     }}>
       <span style={{ fontSize:26, fontWeight:800, color:'#fff', letterSpacing:'-0.5px',
         fontFamily:"'DM Sans', sans-serif" }}>AJ</span>
@@ -273,14 +262,17 @@ export function ProfileScreen() {
     <PhoneFrame>
       {/* ── Outer container — position:relative so overlays can be absolute ── */}
       <div style={{ flex:1, display:'flex', flexDirection:'column',
-        overflow:'hidden', background:T.bg, position:'relative' }}>
+        overflow:'hidden', background:'transparent', position:'relative' }}>
 
         {/* ── Sticky Header ── */}
         <div style={{
-          padding:'10px 20px 12px', background:T.surface,
+          padding:'10px 20px 12px',
+          backdropFilter:'blur(24px) saturate(160%)',
+          WebkitBackdropFilter:'blur(24px) saturate(160%)',
+          background:'rgba(255,255,255,0.55)',
           borderBottom:`1px solid ${T.border}`,
           display:'flex', alignItems:'center', justifyContent:'space-between',
-          flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.04)',
+          flexShrink:0,
         }}>
           <h2 style={{ fontSize:18, fontWeight:700, color:T.text, letterSpacing:'-0.4px' }}>
             Profile
@@ -296,10 +288,7 @@ export function ProfileScreen() {
 
           {/* ── User header card ── */}
           <div style={{
-            background:`linear-gradient(145deg, ${T.primarySoft} 0%, ${T.surface} 70%)`,
-            borderRadius:22, padding:'20px 18px',
-            boxShadow:'0 4px 20px rgba(79,99,210,0.1)',
-            marginBottom:16, border:`1.5px solid ${T.primarySoft}`,
+            ...glass(24, true), padding:'20px 18px', marginBottom:16,
           }}>
             <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:16 }}>
               <Avatar />
